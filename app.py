@@ -173,7 +173,7 @@ with st.container(border=True, key="engine"):
     )
 
 with st.container(border=True):
-    st.subheader("Panel del solicitante", icon=":material/assignment_ind:")
+    st.subheader("Panel del solicitante")
     with st.form("application_form"):
         col1, col2, col3 = st.columns(3)
         age = col1.number_input("Age (Edad)", min_value=18, max_value=100, value=35, step=1)
@@ -212,7 +212,7 @@ with st.container(border=True):
         )
 
 with st.container(border=True):
-    st.subheader("Resultado de evaluación", icon=":material/monitoring:")
+    st.subheader("Resultado de evaluación")
     if submitted:
         row = pd.DataFrame(
             [
