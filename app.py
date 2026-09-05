@@ -12,7 +12,9 @@ MODEL_LABELS = {
     "XGBoost (Avanzado)": "xgb_model.joblib",
 }
 
-RISK_THRESHOLD = 0.5
+DEFAULT_RISK_THRESHOLD_PCT = 50
+MIN_RISK_THRESHOLD_PCT = 10
+MAX_RISK_THRESHOLD_PCT = 90
 
 CHECKING_OPTIONS = ["None", "little", "moderate", "rich"]
 SAVING_OPTIONS = ["None", "little", "moderate", "quite rich", "rich"]
@@ -135,10 +137,10 @@ def load_models() -> dict[str, object]:
     }
 
 
-def render_result(prob: float) -> None:
-    denied = prob > RISK_THRESHOLD
+def render_result(prob: float, threshold_pct: float) -> None:
+    denied = prob > threshold_pct / 100
     tone = "denied" if denied else "approved"
-    verdict = "CRÉDITO DENEGADO - Alto Riesgo de Default" if denied else "CRÉDITO APROBADO"
+    verdict = "CRÉDITO DENEGADO" if denied else "CRÉDITO APROBADO"
     icon = ":material/gpp_bad:" if denied else ":material/verified:"
 
     st.html(
@@ -147,7 +149,7 @@ def render_result(prob: float) -> None:
           <div class="verdict {tone}">{icon} {verdict}</div>
           <div class="prob-label">Probabilidad de default (clase 1)</div>
           <div class="prob-value {tone}">{prob * 100:.2f}%</div>
-          <div class="prob-label">Umbral de decisión: {RISK_THRESHOLD * 100:.0f}%</div>
+          <div class="prob-label">Umbral de decisión: {threshold_pct:.0f}%</div>
         </div>
         """
     )
@@ -170,6 +172,14 @@ with st.container(border=True, key="engine"):
         "Seleccionar Motor Predictivo",
         options=list(MODEL_LABELS.keys()),
         help="Motor de inferencia usado para calcular la probabilidad de default.",
+    )
+    risk_appetite_pct = st.slider(
+        "Apetito de Riesgo (Límite de Probabilidad)",
+        min_value=MIN_RISK_THRESHOLD_PCT,
+        max_value=MAX_RISK_THRESHOLD_PCT,
+        value=DEFAULT_RISK_THRESHOLD_PCT,
+        step=1,
+        help=f"Porcentaje máximo de probabilidad de default para aprobar: si la probabilidad lo supera, la solicitud se deniega.",
     )
 
 with st.container(border=True):
@@ -230,7 +240,7 @@ with st.container(border=True):
         )
         model = models[model_choice]
         prob_default = float(model.predict_proba(row)[0, 1])
-        render_result(prob_default)
+        render_result(prob_default, risk_appetite_pct)
 
         st.metric(
             "Motor", model_choice,
