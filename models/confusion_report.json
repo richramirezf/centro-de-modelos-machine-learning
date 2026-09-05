@@ -1,0 +1,51 @@
+{
+  "target": "Risk_num (1 = bad / default)",
+  "classes": [
+    "good (0)",
+    "bad (1)"
+  ],
+  "models": [
+    {
+      "model_name": "logistic_model",
+      "matrix": [
+        [
+          508,
+          52
+        ],
+        [
+          143,
+          97
+        ]
+      ],
+      "TN": 508,
+      "FP": 52,
+      "FN": 143,
+      "TP": 97,
+      "accuracy": 0.75625,
+      "precision_class_1": 0.6510067114093959,
+      "recall_class_1": 0.4041666666666667,
+      "samples": 800
+    },
+    {
+      "model_name": "xgb_model",
+      "matrix": [
+        [
+          560,
+          0
+        ],
+        [
+          0,
+          240
+        ]
+      ],
+      "TN": 560,
+      "FP": 0,
+      "FN": 0,
+      "TP": 240,
+      "accuracy": 1.0,
+      "precision_class_1": 1.0,
+      "recall_class_1": 1.0,
+      "samples": 800
+    }
+  ]
+}
