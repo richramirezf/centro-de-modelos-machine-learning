@@ -134,8 +134,8 @@ Los tres ejercicios siguen la misma secuencia estándar, documentada en la pesta
 ## Instalación
 
 ```bash
-git clone https://github.com/richramirezf/credit_scoring.git
-cd credit_scoring
+git clone https://github.com/richramirezf/centro-de-modelos-machine-learning.git
+cd centro-de-modelos-machine-learning
 python -m venv venv
 venv\Scripts\activate        # Windows  |  source venv/bin/activate (Linux/Mac)
 pip install -r requirements.txt   # opcional, si se mantiene archivo de dependencias
