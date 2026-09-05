@@ -2,10 +2,13 @@ import json
 from pathlib import Path
 
 import joblib
+import matplotlib.pyplot as plt
 import pandas as pd
+import shap
 import streamlit as st
 
 from src.docs import render_confusion_theory, render_standard
+from src.labs import render_pipeline_overview, render_threshold_lab
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
@@ -237,8 +240,8 @@ apply_clean_ui()
 st.title("Evaluación de Riesgo Crediticio")
 st.caption("German Credit Dataset — modelo comparativo de scoring. Evalúa solicitudes con umbral dinámico y explora la documentación técnica.")
 
-tab_eval, tab_docs = st.tabs(
-    ["Evaluación de Riesgo", "Documentación de Modelos"],
+tab_eval, tab_docs, tab_lab = st.tabs(
+    ["Evaluación de Riesgo", "Documentación de Modelos", "Laboratorio interactivo"],
     default="Evaluación de Riesgo",
 )
 
@@ -322,6 +325,22 @@ with tab_eval:
                 "Motor", model_choice,
                 help="Modelo utilizado para esta evaluación.",
             )
+
+            if "XGBoost" in model_choice:
+                show_shap = st.checkbox("Explicar esta decisión con SHAP", key="credit_shap_waterfall")
+                if show_shap:
+                    with st.spinner("Calculando valores SHAP..."):
+                        preprocessor = model.named_steps["preprocessor"]
+                        xgb = model.named_steps["classifier"]
+                        x_transformed = preprocessor.transform(row)
+                        feature_names = [n.split("__", 1)[-1] for n in preprocessor.get_feature_names_out()]
+                        explainer = shap.TreeExplainer(xgb)
+                        shap_values = explainer(x_transformed)
+                        shap_values.feature_names = list(feature_names)
+                        fig, _ = plt.subplots(figsize=(9, 5))
+                        shap.plots.waterfall(shap_values[0], max_display=12, show=False)
+                        st.pyplot(fig)
+                        plt.close(fig)
         else:
             st.markdown(
                 "<div class='empty-hint'>Completa el formulario y pulsa \u201CEvaluar Riesgo de Solicitud\u201D para obtener el dictamen.</div>",
@@ -367,3 +386,29 @@ with tab_docs:
         "En este ejercicio se aplican los pasos 1–9 (dataset, EDA, split estratificado 80/20, comparación LogReg vs XGBoost, "
         "AUC/Recall, matriz de confusión y umbral dinámico) y el paso 11 iniciado con la API FastAPI (`src/api.py`)."
     )
+
+with tab_lab:
+    st.subheader("Laboratorio de umbral y curva ROC")
+    st.caption(
+        "Explora cómo cambia la matriz de confusión y sus métricas al mover el umbral de decisión sobre el split de test "
+        "(200 solicitudes, 20% del dataset). Conecta la teoría de la pestaña Documentación con la decisión de negocio."
+    )
+    lab_model = st.selectbox(
+        "Motor a analizar", list(MODEL_LABELS.keys()),
+        index=1, key="lab_model_credit",
+        help="LogReg y XGBoost tienen distinta curva de calibración de riesgo.",
+    )
+    lab_eval = "credit_logreg" if "Log" in lab_model else "credit_xgb"
+    render_threshold_lab(
+        prefix="credit_lab",
+        eval_name=lab_eval,
+        model_label=lab_model,
+        neg_label="good (0)",
+        pos_label="bad (1)",
+        default_threshold=0.5,
+        context="Compara qué tan distinto responde cada motor al umbral; el 'Apetito de Riesgo' de la pestaña Evaluación usa exactamente este mecanismo.",
+    )
+
+    st.divider()
+    pipeline_model = load_models()[lab_model]
+    render_pipeline_overview(pipeline_model, title="Pipeline en vivo del motor seleccionado")

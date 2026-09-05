@@ -10,6 +10,7 @@ import shap
 import streamlit as st
 
 from src.docs import render_confusion_theory, render_standard
+from src.labs import render_pipeline_overview, render_threshold_lab
 from src_telco.data_loader import load_telco_data
 from src_telco.quality import run_quality_pipeline
 
@@ -99,8 +100,8 @@ st.caption("Telco Customer Churn (IBM, 7,043 clientes) — modelo XGBoost con ex
 
 df = load_clean_data()
 
-tab_eda, tab_pred, tab_batch, tab_docs, tab_how = st.tabs(
-    ["📊 EDA & Calidad", "🔮 Predicción Interactiva", "📁 Predicción Masiva (CSV)", "📚 Documentación de Modelos", "🧠 Cómo funciona"]
+tab_eda, tab_pred, tab_batch, tab_docs, tab_how, tab_lab = st.tabs(
+    ["📊 EDA & Calidad", "🔮 Predicción Interactiva", "📁 Predicción Masiva (CSV)", "📚 Documentación de Modelos", "🧠 Cómo funciona", "🔬 Laboratorio"]
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -514,3 +515,22 @@ with tab_how:
         `φᵢ = Σ [|S|!(n-|S|-1)!/n!] · [f(S ∪ {i}) - f(S)]`
         Donde *S* es cualquier subconjunto de features sin *i*, y *f(S)* es la predicción del modelo. El gráfico de cascada (waterfall) muestra cómo cada feature contribuye a desplazar la predicción desde el valor base hasta la predicción final para un cliente específico.
         ''')
+
+with tab_lab:
+    st.subheader("Laboratorio de umbral y curva ROC")
+    st.caption(
+        "Mueve el umbral sobre el split de test (1,409 clientes) y observa el equilibrio entre detectar churn y generar falsas alarmas. "
+        "El deslizador no cambia el modelo: cambia la decisión de negocio sobre sus probabilidades."
+    )
+    render_threshold_lab(
+        prefix="churn_lab",
+        eval_name="churn",
+        model_label="XGBoost Churn",
+        neg_label="No Churn (0)",
+        pos_label="Churn (1)",
+        default_threshold=0.4,
+        context="La tasa base de churn es ~27%: con un umbral de 0.5 se detecta poco. Prueba umbrales bajos y compara recall vs precision.",
+    )
+
+    st.divider()
+    render_pipeline_overview(load_churn_model(), title="Pipeline en vivo del modelo de churn")

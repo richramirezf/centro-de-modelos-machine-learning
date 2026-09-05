@@ -4,8 +4,10 @@ from pathlib import Path
 import joblib
 import pandas as pd
 import streamlit as st
+from src.academy_ui import render_concept
 
 from src.docs import render_confusion_theory, render_standard
+from src.labs import render_pipeline_overview, render_threshold_lab
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODEL_PATH = PROJECT_ROOT / "models" / "noshow_model.joblib"
@@ -104,12 +106,12 @@ def apply_clean_ui() -> None:
 
 
 @st.cache_resource(show_spinner="Cargando el modelo de no-show...")
-def load_model():
+def load_noshow_model():
     return joblib.load(MODEL_PATH)
 
 
 @st.cache_data(ttl="1h")
-def load_confusion_report() -> dict:
+def load_noshow_confusion_report() -> dict:
     return json.loads(CONFUSION_PATH.read_text(encoding="utf-8"))
 
 
@@ -156,13 +158,46 @@ def render_features_table() -> None:
     )
 
 
+def render_sensitivity_probe() -> None:
+    st.markdown("#### ¿Cómo cambia el riesgo con cada variable? (sonda)")
+    st.caption(
+        "Fijamos un perfil base (edad 35, espera 4 días, sin beca ni condiciones, con SMS) y movemos una variable a la vez "
+        "para observar el efecto sobre la probabilidad de no-show."
+    )
+    model = load_noshow_model()
+    base = {"Age": 35, "WaitTime_Days": 4, "Scholarship": 0, "Hipertension": 0, "Diabetes": 0, "SMS_received": 1}
+
+    def prob_of(**overrides) -> float:
+        row = {**base, **overrides}
+        frame = pd.DataFrame([{k: int(row[k]) for k in FEATURES}])[FEATURES]
+        return float(model.predict_proba(frame)[0, 1])
+
+    ages = list(range(0, 101, 2))
+    age_probs = [prob_of(Age=a) for a in ages]
+    st.markdown("**Efecto de la edad** (resto fijo):")
+    st.line_chart(pd.DataFrame({"Probabilidad de no-show": age_probs}, index=pd.Index(ages, name="Edad")))
+
+    waits = list(range(0, 61, 2))
+    wait_probs = [prob_of(WaitTime_Days=w) for w in waits]
+    st.markdown("**Efecto de los días de espera** (resto fijo):")
+    st.line_chart(pd.DataFrame({"Probabilidad de no-show": wait_probs}, index=pd.Index(waits, name="Días de espera")))
+
+    col_s1, col_s2 = st.columns(2)
+    col_s1.metric("Sin SMS recordatorio", f"{prob_of(SMS_received=0) * 100:.1f}%")
+    col_s2.metric("Con SMS recordatorio", f"{prob_of(SMS_received=1) * 100:.1f}%")
+    st.markdown(
+        "Observa cómo el recordatorio SMS reduce la probabilidad estimada: estás viendo el efecto que el modelo aprendió de los datos."
+    )
+    render_concept("calibration")
+
+
 apply_clean_ui()
 
 st.title("Predicción de Inasistencia Médica (No-Show)")
 st.caption("Medical Appointment No Shows (110,527 citas) — modelo XGBoost para estimar la probabilidad de que un paciente falte a su cita.")
 
-tab_pred, tab_docs = st.tabs(
-    ["Predicción de Inasistencia", "Documentación del Ejercicio"],
+tab_pred, tab_docs, tab_lab = st.tabs(
+    ["Predicción de Inasistencia", "Documentación del Ejercicio", "Laboratorio interactivo"],
     default="Predicción de Inasistencia",
 )
 
@@ -205,7 +240,7 @@ with tab_pred:
                     }
                 ]
             )
-            model = load_model()
+            model = load_noshow_model()
             prob_noshow = float(model.predict_proba(row)[0, 1])
             render_verdict(prob_noshow)
 
@@ -227,7 +262,7 @@ with tab_docs:
     st.divider()
     st.subheader("Cómo funciona el modelo")
     st.markdown("### XGBoost con balanceo de clases")
-    report = load_confusion_report()
+    report = load_noshow_confusion_report()
 
     with st.container(border=True):
         st.markdown("**¿Qué hace en general?**")
@@ -292,3 +327,24 @@ with tab_docs:
         "negativas, EDA de tasa de no-show, split estratificado 80/20, XGBoost balanceado, métricas de test y matriz de confusión) y el "
         "despliegue vía dashboard (paso 11)."
     )
+
+with tab_lab:
+    st.subheader("Laboratorio de umbral y sensibilidad")
+    st.caption(
+        "Mueve el umbral sobre el split de test (22,105 citas) para ver el equilibrio entre detectar no-shows y generar falsas alarmas. "
+        "Las probabilidades están calibradas: el punto de Youden (~19%) y las bandas de la pestaña Predicción se basan en esta misma curva."
+    )
+    render_threshold_lab(
+        prefix="noshow_lab",
+        eval_name="noshow",
+        model_label="XGBoost calibrado (No-Show)",
+        neg_label="Asiste (0)",
+        pos_label="No-Show (1)",
+        default_threshold=0.19,
+    )
+
+    st.divider()
+    render_sensitivity_probe()
+
+    st.divider()
+    render_pipeline_overview(load_noshow_model(), title="Pipeline en vivo del modelo No-Show")

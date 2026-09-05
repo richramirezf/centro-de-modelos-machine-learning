@@ -1,11 +1,13 @@
-﻿import json
+import json
 from pathlib import Path
 
 import joblib
 import pandas as pd
 import streamlit as st
+from src.academy_ui import render_concept
 
 from src.docs import apply_theme, render_standard
+from src.labs import render_pipeline_overview
 from src.housing_train import FEATURES
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -40,7 +42,7 @@ apply_theme()
 st.title("Valuación Inmobiliaria (Regresión)")
 st.caption("Modelo XGBRegressor para estimar el precio (USD) de una propiedad segun superficie, habitaciones, antiguedad y garaje.")
 
-tab_pred, tab_docs = st.tabs(["Valuación de Propiedad", "Documentación del Ejercicio"], default="Valuación de Propiedad")
+tab_pred, tab_docs, tab_lab = st.tabs(["Valuación de Propiedad", "Documentación del Ejercicio", "Laboratorio (A vs B)"], default="Valuación de Propiedad")
 
 with tab_pred:
     with st.container(border=True):
@@ -104,3 +106,53 @@ with tab_docs:
         "En este ejercicio se aplica una versión de los pasos 1-9 (objetivo de valuación, dataset simulado, split 80/20, "
         "escalado + XGBRegressor y métricas R²/RMSE/MAE) y el paso 11 con el despliegue en este dashboard."
     )
+
+with tab_lab:
+    st.subheader("Comparador de propiedades (A vs B)")
+    st.caption("Configura dos propiedades y compara su precio estimado. Cambia una sola característica para aislar su efecto (garaje, m², antigüedad…).")
+
+    model = load_housing_model()
+
+    def price_of(metros, hab, ant, gar):
+        row = pd.DataFrame(
+            [{"metros_cuadrados": metros, "habitaciones": hab, "antiguedad_anios": ant, "tiene_garaje": int(gar)}]
+        )[FEATURES]
+        return float(model.predict(row)[0])
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown("#### Propiedad A")
+        m_a = st.slider("m² A", 40, 300, 100, 5, key="lab_a_m2")
+        h_a = st.slider("Habitaciones A", 1, 6, 3, key="lab_a_hab")
+        a_a = st.slider("Antigüedad A", 0, 50, 20, key="lab_a_ant")
+        g_a = st.selectbox("Garaje A", ["No", "Sí"], key="lab_a_gar")
+    with col_b:
+        st.markdown("#### Propiedad B")
+        m_b = st.slider("m² B", 40, 300, 120, 5, key="lab_b_m2")
+        h_b = st.slider("Habitaciones B", 1, 6, 3, key="lab_b_hab")
+        a_b = st.slider("Antigüedad B", 0, 50, 10, key="lab_b_ant")
+        g_b = st.selectbox("Garaje B", ["No", "Sí"], key="lab_b_gar", index=1)
+
+    price_a = price_of(m_a, h_a, a_a, g_a == "Sí")
+    price_b = price_of(m_b, h_b, a_b, g_b == "Sí")
+    diff = price_b - price_a
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Precio A", f"${price_a:,.0f}")
+    c2.metric("Precio B", f"${price_b:,.0f}")
+    c3.metric("Diferencia (B − A)", f"${diff:+,.0f}", delta=f"{(diff / price_a) * 100:+.1f}%" if price_a else None)
+
+    st.markdown(
+        f"La propiedad B vale **${price_b:,.0f}** frente a **${price_a:,.0f}** de la A "
+        f"({'+' if diff > 0 else ''}${diff:,.0f}). El modelo aprendió que el garaje y los m² suman; la antigüedad resta."
+    )
+
+    with st.expander("Ver cómo se generó el dataset simulado"):
+        st.write(
+            "El dataset se simuló con: `precio = 25,000 + 950·m² + 12,000·habitaciones − 1,300·antigüedad + 22,000·garaje + ruido`. "
+            "Por eso el efecto del garaje (~+22k USD) o de cada m² (~950 USD) es casi lineal: XGBoost lo recupera de los datos."
+        )
+        render_concept("pipeline")
+
+    st.divider()
+    render_pipeline_overview(model, title="Pipeline en vivo de valuación")

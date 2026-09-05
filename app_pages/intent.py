@@ -1,11 +1,13 @@
-﻿import json
+import json
 from pathlib import Path
 
 import joblib
 import pandas as pd
 import streamlit as st
+from src.academy_ui import render_concept
 
 from src.docs import apply_theme, render_standard
+from src.labs import render_pipeline_overview
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODEL_PATH = PROJECT_ROOT / "models" / "nlp_intent_model.joblib"
@@ -54,7 +56,7 @@ apply_theme()
 st.title("Clasificador de Intenciones (NLP)")
 st.caption("TF-IDF + Regresión Logística sobre mensajes de chat para detectar la intención del cliente: Soporte Técnico, Ventas, Reclamos u Horarios.")
 
-tab_pred, tab_docs = st.tabs(["Clasificar Mensaje", "Documentación del Ejercicio"], default="Clasificar Mensaje")
+tab_pred, tab_docs, tab_lab = st.tabs(["Clasificar Mensaje", "Documentación del Ejercicio", "Laboratorio NLP"], default="Clasificar Mensaje")
 
 with tab_pred:
     with st.container(border=True):
@@ -129,3 +131,61 @@ with tab_docs:
         "En este ejercicio se aplica una versión de los pasos 1-9 (objetivo de enrutamiento, corpus simulado de intenciones, "
         "split 80/20 estratificado, TF-IDF + Regresión Logística y exactitud por clase) y el paso 11 con el despliegue en este dashboard."
     )
+
+with tab_lab:
+    st.subheader("¿Qué palabras delatan cada intención?")
+    st.caption(
+        "Los pesos de la Regresión Logística sobre las features TF-IDF muestran qué términos empujan hacia cada clase "
+        "(peso positivo = aumenta la probabilidad de esa intención)."
+    )
+    model = load_intent_model()
+    render_pipeline_overview(model, title="Pipeline NLP en vivo")
+
+    tfidf = model.named_steps["tfidf"]
+    clf = model.named_steps["clf"]
+    vocab = list(tfidf.get_feature_names_out())
+    coef = clf.coef_
+
+    intent_order = list(SAMPLE_MESSAGES.keys())
+    selected = st.selectbox(
+        "Intención",
+        options=[INTENT_LABELS[k] for k in intent_order],
+        key="lab_intent",
+    )
+    sel_key = next(k for k in intent_order if INTENT_LABELS[k] == selected)
+    row_idx = int(list(clf.classes_).index(sel_key))
+
+    weights = pd.DataFrame({"Termino": vocab, "Peso": coef[row_idx]})
+    weights["|Peso|"] = weights["Peso"].abs()
+    top = weights.sort_values("|Peso|", ascending=False).head(12)[["Termino", "Peso"]]
+
+    st.dataframe(top.reset_index(drop=True), hide_index=True)
+    render_concept("tfidf")
+
+    st.divider()
+    st.subheader("Reto: adivina la intención")
+    reto_pool = [
+        ("Hola, no puedo iniciar sesion en mi cuenta.", "Soporte_Tecnico"),
+        ("Quiero saber cuanto cuesta internet dedicado.", "Ventas"),
+        ("Me llego una factura duplicada este mes.", "Reclamos"),
+        ("A que hora cierran la sucursal hoy?", "Horarios"),
+        ("La aplicacion se cayo cuando abri la pagina.", "Soporte_Tecnico"),
+        ("Hay alguna oferta para contratar el plan familiar?", "Ventas"),
+        ("Me cobraron de mas en el servicio de television.", "Reclamos"),
+        ("Abren los sabados por la tarde?", "Horarios"),
+    ]
+    idx = st.session_state.get("reto_idx", 0)
+    if st.button("Siguiente mensaje", key="reto_next"):
+        idx = (idx + 1) % len(reto_pool)
+        st.session_state["reto_idx"] = idx
+        st.rerun()
+    texto_reto, correct_key = reto_pool[idx]
+    st.markdown(f"> *{texto_reto}*")
+    opciones = [INTENT_LABELS[k] for k in intent_order]
+    respuesta = st.radio("¿Cuál es la intención?", opciones, key=f"reto_ans_{idx}")
+    if respuesta:
+        correcto = INTENT_LABELS[correct_key]
+        if respuesta == correcto:
+            st.success("¡Correcto! El modelo detecta la misma intención.")
+        else:
+            st.error(f"Incorrecto. La intención correcta es: {correcto}.")

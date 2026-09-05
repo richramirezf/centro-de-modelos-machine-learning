@@ -40,14 +40,18 @@ with tab_guide:
 with tab_quiz:
     st.subheader("Pon a prueba lo aprendido")
     st.caption("Elige un quiz: cada ejercicio tiene preguntas específicas y hay un quiz general al final.")
+    ex_keys = [key for key, _ in QUIZ_EXERCISE_TITLES]
     titles = {key: label for key, label in QUIZ_EXERCISE_TITLES}
-    exercise_options = [titles[k] for k in titles]
-    default_index = exercise_options.index("Scoring de Crédito") if "Scoring de Crédito" in exercise_options else 0
+
+    requested = st.query_params.get("quiz", None)
+    default_key = requested if requested in ex_keys else "credito"
+
     selection = st.selectbox(
         "Quiz",
-        options=exercise_options,
-        index=default_index,
+        options=[titles[k] for k in ex_keys],
+        index=ex_keys.index(default_key),
         label_visibility="collapsed",
+        key="quiz_select",
     )
     ex_key = next(k for k, label in QUIZ_EXERCISE_TITLES if label == selection)
     render_quiz(prefix=f"quiz_{ex_key}", bank=QUIZZES[ex_key], title=selection)

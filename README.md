@@ -163,6 +163,21 @@ centro-de-modelos-machine-learning/
 
 ---
 
+## Funciones de aprendizaje (portal educativo)
+
+Además de los 6 ejercicios, el portal incluye módulos pensados como **herramienta de aprendizaje**:
+
+- **Página "Aprende ML"** (`app_pages/aprende.py`): ruta de aprendizaje 1→6 con niveles, glosario con buscador (~37 términos), guía "¿qué modelo elegir?", quizzes con corrección en vivo por ejercicio + quiz general, y FAQ de errores comunes.
+- **Laboratorios interactivos** por ejercicio:
+  - Clasificadores (crédito, churn, no-show): umbral de decisión deslizante que recalcula la matriz de confusión y métricas sobre el split de test + **curva ROC** interactiva (artefactos precalculados en `models/eval/*.npz`, generados con `python src/eval_export.py`).
+  - No-show: sonda de sensibilidad (edad, espera, SMS) y explicación de calibración.
+  - Crédito: waterfall **SHAP** por solicitud evaluada con XGBoost.
+  - Demanda/Vivienda: comparador de escenarios **A vs B** + revelado de la fórmula del dataset simulado.
+  - NLP: pesos TF-IDF por intención y reto "adivina la intención".
+- **Transparencia técnica**: vista "pipeline en vivo" (pasos, transformadores, columnas y vocabulario) integrada en cada ejercicio.
+
+---
+
 ## Metodología (CRISP-DM + MLOps)
 
 Los seis ejercicios siguen la misma secuencia estándar, documentada en la pestaña de cada ejercicio:
