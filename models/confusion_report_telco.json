@@ -1,0 +1,31 @@
+{
+  "model_name": "churn_model",
+  "class_labels": [
+    "No Churn (0)",
+    "Churn (1)"
+  ],
+  "matrix": [
+    [
+      3910,
+      229
+    ],
+    [
+      452,
+      1043
+    ]
+  ],
+  "TN": 3910,
+  "FP": 229,
+  "FN": 452,
+  "TP": 1043,
+  "accuracy": 0.8791267305644302,
+  "precision_class_1": 0.8199685534591195,
+  "recall_class_1": 0.6976588628762542,
+  "samples": 5634,
+  "test": {
+    "accuracy": 0.794180269694819,
+    "roc_auc": 0.8337815495104499,
+    "precision_churn": 0.6428571428571429,
+    "recall_churn": 0.5053475935828877
+  }
+}
