@@ -20,11 +20,17 @@ churn = st.Page(
     icon=":material/support_agent:",
     url_path="churn",
 )
+noshow = st.Page(
+    "app_pages/noshow.py",
+    title="Ausentismo Médico (No-Show)",
+    icon=":material/event_busy:",
+    url_path="noshow",
+)
 
 pg = st.navigation(
     {
         "Portal": [home],
-        "Ejercicios de Machine Learning": [credito, churn],
+        "Ejercicios de Machine Learning": [credito, churn, noshow],
     },
     expanded=True,
 )

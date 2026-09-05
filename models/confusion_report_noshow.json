@@ -1,0 +1,41 @@
+{
+  "model_name": "noshow_model",
+  "class_labels": [
+    "Asiste (0)",
+    "No-Show (1)"
+  ],
+  "features": [
+    "Age",
+    "WaitTime_Days",
+    "Scholarship",
+    "Hipertension",
+    "Diabetes",
+    "SMS_received"
+  ],
+  "matrix": [
+    [
+      36800,
+      33765
+    ],
+    [
+      2923,
+      14928
+    ]
+  ],
+  "TN": 36800,
+  "FP": 33765,
+  "FN": 2923,
+  "TP": 14928,
+  "accuracy": 0.585052479189287,
+  "precision_class_1": 0.30657384018236705,
+  "recall_class_1": 0.8362556719511512,
+  "samples": 88416,
+  "test": {
+    "threshold": 0.191972827192356,
+    "accuracy": 0.5801854783985524,
+    "roc_auc": 0.7226901699123425,
+    "precision_no_show": 0.3037242278542906,
+    "recall_no_show": 0.835088505489581,
+    "no_show_rate_test": 0.2019000226193169
+  }
+}
