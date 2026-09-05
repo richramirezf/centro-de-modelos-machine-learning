@@ -1,13 +1,14 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="ML Hub · Scoring & Churn",
+    page_title="Centro de Modelos de Machine Learning",
     page_icon=":material/model_training:",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 home = st.Page("app_pages/inicio.py", title="Inicio", icon=":material/home:", default=True)
+
 credito = st.Page(
     "app_pages/credit_scoring.py",
     title="Scoring de Crédito",
@@ -27,10 +28,30 @@ noshow = st.Page(
     url_path="noshow",
 )
 
+demand = st.Page(
+    "app_pages/demand.py",
+    title="Pronóstico de Demanda",
+    icon=":material/storefront:",
+    url_path="demanda",
+)
+housing = st.Page(
+    "app_pages/housing.py",
+    title="Valuación Inmobiliaria",
+    icon=":material/home_work:",
+    url_path="vivienda",
+)
+intent = st.Page(
+    "app_pages/intent.py",
+    title="Clasificador de Textos (NLP)",
+    icon=":material/forum:",
+    url_path="nlp",
+)
+
 pg = st.navigation(
     {
         "Portal": [home],
-        "Ejercicios de Machine Learning": [credito, churn, noshow],
+        "Clasificación Binaria": [credito, churn, noshow],
+        "Regresión & NLP": [demand, housing, intent],
     },
     expanded=True,
 )

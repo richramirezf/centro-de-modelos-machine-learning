@@ -3,6 +3,54 @@
 import streamlit as st
 
 
+def apply_theme() -> None:
+    """Generic teal/M3 page theme shared by the exercise pages."""
+    st.html(
+        """
+        <style>
+          :root {
+            --teal-900: #004d40;
+            --teal-700: #00796b;
+            --text-muted: #546e7a;
+            --surface: #ffffff;
+            --shadow-2: 0 2px 4px rgba(0, 0, 0, .08), 0 4px 12px rgba(0, 0, 0, .12);
+          }
+
+          [data-testid="stAppViewContainer"] {
+            background: linear-gradient(180deg, #f0f7f6 0%, #e8f1f0 100%);
+          }
+
+          h1, h2, h3 { color: var(--teal-900) !important; letter-spacing: .2px; }
+
+          [data-testid="stTabs"] button[aria-selected="true"] {
+            color: var(--teal-700);
+            font-weight: 600;
+          }
+
+          [data-testid="stVerticalBlockBorderWrapper"] {
+            background: var(--surface);
+            border: 1px solid rgba(0, 121, 107, .18) !important;
+            border-radius: 16px;
+            box-shadow: var(--shadow-2);
+            padding: .35rem .6rem;
+          }
+
+          .st-key-evaluate button[kind="primary"] {
+            background: var(--teal-700);
+            border-radius: 12px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 1px 3px rgba(0, 0, 0, .10);
+            font-weight: 600;
+          }
+          .st-key-evaluate button[kind="primary"]:hover {
+            background: var(--teal-900);
+          }
+
+          .empty-hint { color: var(--text-muted); }
+        </style>
+        """
+    )
+
+
 def render_confusion_theory(pos_event: str) -> None:
     """Generic confusion-matrix theory. ``pos_event`` names the positive class."""
     st.markdown(

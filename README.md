@@ -1,6 +1,6 @@
-# ML Hub · Credit Scoring / Churn / No-Show
+# Centro de Modelos de Machine Learning
 
-Portal unificado de **modelos de machine learning** construido con Streamlit. Reúne tres ejercicios de clasificación binaria supervisada con una **misma metodología**: cada ejercicio incluye su caso de negocio, predicción interactiva y una pestaña de *documentación de modelos* (variables predictoras, funcionamiento general/técnico, casos de uso, consideraciones, matriz de confusión de entrenamiento, teoría de la matriz y paso a paso estándar CRISP-DM + MLOps).
+Portal unificado de **modelos de machine learning** construido con Streamlit. Reúne **seis ejercicios** —clasificación binaria, regresión continua y NLP— con una **misma metodología**: cada ejercicio incluye su caso de negocio, predicción interactiva y una pestaña de *documentación* (variables predictoras, funcionamiento general/técnico, casos de uso, consideraciones, métricas y paso a paso estándar CRISP-DM + MLOps).
 
 ---
 
@@ -8,31 +8,40 @@ Portal unificado de **modelos de machine learning** construido con Streamlit. Re
 
 | Ejercicio | Dataset | Registros | Modelo(s) | Problema |
 |---|---|---|---|---|
-| **Scoring de Crédito** | German Credit | 1,000 | Regresión Logística + XGBoost | Riesgo de default crediticio |
-| **Churn Telco** | Telco Customer Churn (IBM) | 7,043 | XGBoost (+ SHAP) | Abandono de clientes |
-| **Ausentismo Médico (No-Show)** | Medical Appointment No Shows | 110,527 | XGBoost calibrado | Inasistencia a citas médicas |
+| **Scoring de Crédito** | German Credit | 1,000 | Regresión Logística + XGBoost | Clasificación: default crediticio |
+| **Churn Telco** | Telco Customer Churn (IBM) | 7,043 | XGBoost (+ SHAP) | Clasificación: abandono de clientes |
+| **Ausentismo Médico (No-Show)** | Medical Appointment No Shows | 110,527 | XGBoost calibrado | Clasificación: inasistencia a citas |
+| **Pronóstico de Demanda** | Simulado (ventas) | 20,000 | XGBRegressor | Regresión: volumen de ventas |
+| **Valuación Inmobiliaria** | Simulado (inmobiliario) | 15,000 | XGBRegressor | Regresión: precio de propiedad (USD) |
+| **Clasificador de Textos (NLP)** | Simulado (chat en español) | 522 | TF-IDF + Regresión Logística | NLP: intención de mensaje |
 
 ---
 
 ## Arquitectura del proyecto
 
 ```
-Credit_scoring/
+centro-de-modelos-machine-learning/
 ├── app.py                        # Router multipágina (st.navigation)
 ├── app_pages/
-│   ├── inicio.py                 # Hub con tarjetas de los 3 ejercicios
+│   ├── inicio.py                 # Hub con tarjetas de los 6 ejercicios
 │   ├── credit_scoring.py         # Ejercicio 1: scoring de crédito
 │   ├── telco_churn.py            # Ejercicio 2: churn de telecomunicaciones
-│   └── noshow.py                 # Ejercicio 3: ausentismo médico (No-Show)
-├── src/                          # Módulos del ejercicio de crédito
+│   ├── noshow.py                 # Ejercicio 3: ausentismo médico (No-Show)
+│   ├── demand.py                 # Ejercicio 4: pronóstico de demanda
+│   ├── housing.py                # Ejercicio 5: valuación inmobiliaria
+│   └── intent.py                 # Ejercicio 6: clasificador de textos (NLP)
+├── src/                          # Módulos de entrenamiento y documentación
 │   ├── data_loader.py            # Carga del German Credit Dataset
 │   ├── quality.py                # Imputación y codificación del target
 │   ├── eda.py                    # Análisis exploratorio
 │   ├── train.py                  # Entrenamiento comparativo LogReg / XGBoost
 │   ├── confusion.py              # Matrices de confusión de entrenamiento (crédito)
 │   ├── medical_train.py          # Pipeline de datos + modelo No-Show (calibrado)
+│   ├── demand_train.py           # Regresión de demanda (simulado) → demand_model
+│   ├── housing_train.py          # Regresión inmobiliaria (simulado) → housing_model
+│   ├── nlp_train.py              # Clasificación de intenciones NLP → nlp_intent_model
 │   ├── api.py                    # Microservicio FastAPI (crédito)
-│   └── docs.py                   # Documentación compartida (teoría matriz + CRISP-DM)
+│   └── docs.py                   # Tema + documentación compartida (teoría + CRISP-DM)
 ├── src_telco/                    # Módulos del ejercicio de churn
 │   ├── data_loader.py
 │   ├── quality.py
@@ -42,9 +51,15 @@ Credit_scoring/
 │   ├── xgb_model.joblib
 │   ├── churn_model.joblib
 │   ├── noshow_model.joblib
+│   ├── demand_model.joblib
+│   ├── housing_model.joblib
+│   ├── nlp_intent_model.joblib
 │   ├── confusion_report.json        # (crédito)
 │   ├── confusion_report_telco.json  # (churn)
-│   └── confusion_report_noshow.json # (no-show)
+│   ├── confusion_report_noshow.json # (no-show)
+│   ├── demand_report.json           # (regresión demanda)
+│   ├── housing_report.json          # (regresión vivienda)
+│   └── nlp_intent_report.json       # (NLP intenciones)
 ├── reports/                      # Imágenes de matrices de confusión (PNG)
 ├── data/                         # Datasets locales (GITIGNORED, ver sección Datos)
 └── .streamlit/config.toml        # Tema Teal / Material 3
@@ -123,9 +138,34 @@ Credit_scoring/
 
 ---
 
+## Ejercicios 4-6 — Regresión y NLP (datos simulados)
+
+### 4 — Pronóstico de Demanda (`src/demand_train.py` → `models/demand_model.joblib`)
+
+- **Problema:** regresión continua — estimar `volumen_ventas` (unidades) a partir de `dia_semana`, `tipo_producto`, `precio` y `promocion_activa`.
+- **Pipeline:** ColumnTransformer (OneHotEncoder sobre categóricas) + `XGBRegressor` (300 árboles, `lr=0.05`, `max_depth=5`).
+- **Métricas (test):** R² = 0.9117 · RMSE = 5.87 · MAE = 4.08.
+- **Vista:** selectores de día/producto, precio numérico y checkbox de promoción; salida `st.metric` con unidades proyectadas.
+
+### 5 — Valuación Inmobiliaria (`src/housing_train.py` → `models/housing_model.joblib`)
+
+- **Problema:** regresión continua — estimar `precio_usd` a partir de `metros_cuadrados`, `habitaciones`, `antiguedad_anios` y `tiene_garaje`.
+- **Pipeline:** ColumnTransformer (StandardScaler sobre numéricas) + `XGBRegressor` (400 árboles, `lr=0.05`, `max_depth=5`).
+- **Métricas (test):** R² = 0.9011 · RMSE ≈ $25,309 · MAE ≈ $20,298.
+- **Vista:** sliders de m²/habitaciones/antigüedad y selector de garaje; salida de precio formateada en USD (+ precio por m²).
+
+### 6 — Clasificador de Textos / Intenciones (`src/nlp_train.py` → `models/nlp_intent_model.joblib`)
+
+- **Problema:** NLP multiclase — clasificar mensajes de chat en `Soporte_Tecnico`, `Ventas`, `Reclamos`, `Horarios`.
+- **Pipeline:** `TfidfVectorizer` (n-gramas 1–2, sublinear_tf) + `LogisticRegression` multinomial.
+- **Métricas (test):** Accuracy = 1.0000 (corpus simulado con separación léxica clara; en producción se requiere más variedad).
+- **Vista:** `st.text_area` para el mensaje; muestra intención detectada + confianza (`predict_proba`) y distribución de probabilidades.
+
+---
+
 ## Metodología (CRISP-DM + MLOps)
 
-Los tres ejercicios siguen la misma secuencia estándar, documentada en la pestaña de cada ejercicio:
+Los seis ejercicios siguen la misma secuencia estándar, documentada en la pestaña de cada ejercicio:
 
 1. Entendimiento del negocio → 2. Recolección de datos → 3. Calidad y limpieza → 4. EDA → 5. Ingeniería de atributos → 6. Diseño experimental (split 80/20 estratificado) → 7. Entrenamiento → 8. Evaluación (ROC-AUC, recall/precision, matriz de confusión) → 9. Calibración del umbral → 10. Validación y riesgo → 11. Despliegue y monitoreo → 12. Gobernanza y documentación.
 
@@ -171,6 +211,9 @@ python -m src.confusion       # crédito: matrices de confusión (reports/ + JSO
 python -m src_telco.train     # churn: entrena XGBoost
 python -m src.confusion_telco # churn: matrices de confusión
 python -m src.medical_train   # no-show: pipeline + matriz de confusión
+python src/demand_train.py    # regresión de demanda (genera demand_model.joblib)
+python src/housing_train.py   # regresión inmobiliaria (genera housing_model.joblib)
+python src/nlp_train.py       # NLP intenciones (genera nlp_intent_model.joblib)
 ```
 
 ---
@@ -186,6 +229,8 @@ Los datasets NO se versionan (`.gitignore` excluye `*.csv`). Se esperan en `data
 | `KaggleV2-May-2016.csv` | Medical Appointment No Shows (Kaggle) |
 
 El de no-show puede descargarse con `kagglehub.dataset_download("joniarroba/noshowappointments")`.
+
+Los datasets de **demanda, vivienda y NLP son simulados** de forma determinista dentro de cada script de entrenamiento (`simulate_sales`, `simulate_housing`, `build_corpus`), por lo que no requieren archivos externos.
 
 ---
 

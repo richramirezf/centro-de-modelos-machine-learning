@@ -1,0 +1,23 @@
+{
+  "model_name": "demand_model",
+  "features": [
+    "dia_semana",
+    "tipo_producto",
+    "precio",
+    "promocion_activa"
+  ],
+  "categorical": [
+    "dia_semana",
+    "tipo_producto"
+  ],
+  "numeric": [
+    "precio",
+    "promocion_activa"
+  ],
+  "n_samples": 20000,
+  "test": {
+    "rmse": 5.874336666429698,
+    "mae": 4.078764072537422,
+    "r2": 0.9116719735896146
+  }
+}

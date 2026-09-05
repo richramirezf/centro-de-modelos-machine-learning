@@ -1,0 +1,20 @@
+{
+  "model_name": "housing_model",
+  "features": [
+    "metros_cuadrados",
+    "habitaciones",
+    "antiguedad_anios",
+    "tiene_garaje"
+  ],
+  "numeric_scaled": [
+    "metros_cuadrados",
+    "habitaciones",
+    "antiguedad_anios"
+  ],
+  "n_samples": 15000,
+  "test": {
+    "rmse": 25309.09159464976,
+    "mae": 20297.715650390626,
+    "r2": 0.9011289542165668
+  }
+}

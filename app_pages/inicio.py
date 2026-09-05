@@ -5,70 +5,76 @@ st.caption("Plataforma unificada con la misma metodología por ejercicio: el cas
 
 st.markdown(
     """
-    Cada ejercicio sigue la **misma estructura**: predicción interactiva, análisis exploratorio y una pestaña de
-    **documentación de modelos** con variables predictoras, funcionamiento técnico, matriz de confusión de
-    entrenamiento y el paso a paso estándar (CRISP-DM + MLOps).
+    Cada ejercicio sigue la **misma estructura**: predicción interactiva, análisis exploratorio (cuando aplica) y una pestaña de
+    **documentación** con variables predictoras, funcionamiento técnico, métricas y el paso a paso estándar (CRISP-DM + MLOps).
 
     Selecciona un ejercicio desde la **barra lateral** o desde las tarjetas siguientes.
     """
 )
 
-col_cr, col_tc, col_ns = st.columns(3, gap="large")
 
-with col_cr:
-    st.markdown("## :material/credit_score: Scoring de Crédito")
-    st.markdown(
-        """
-        **Clasificación de riesgo crediticio** sobre el German Credit Dataset (1,000 solicitudes).
+def exercise_card(icon: str, title: str, description: str, button_label: str, page: str, key: str) -> None:
+    st.markdown(f"## {icon} {title}")
+    st.markdown(description)
+    if st.button(button_label, key=key, icon=":material/open_in_new:", type="primary"):
+        st.switch_page(page)
 
-        - Motores: Regresión Logística (interpretable) y XGBoost.
-        - Umbral de decisión dinámico según apetito de riesgo.
-        - Microservicio FastAPI (`src/api.py`).
-        """
+
+st.markdown("## Clasificación binaria")
+col_a, col_b, col_c = st.columns(3, gap="large")
+with col_a:
+    exercise_card(
+        ":material/credit_score:", "Scoring de Crédito",
+        "Riesgo de **default crediticio** (German Credit, 1,000). LogReg + XGBoost, umbral dinámico y API FastAPI.",
+        "Abrir Scoring de Crédito", "app_pages/credit_scoring.py", "go_credit",
     )
-    if st.button("Abrir Scoring de Crédito", key="go_credit", icon=":material/open_in_new:", type="primary"):
-        st.switch_page("app_pages/credit_scoring.py")
-
-with col_tc:
-    st.markdown("## :material/support_agent: Churn Telco")
-    st.markdown(
-        """
-        **Predicción de abandono de clientes** sobre Telco Customer Churn de IBM (7,043 clientes).
-
-        - Motor: XGBoost con explicabilidad SHAP (waterfall).
-        - EDA interactivo, predicción por cliente y por lote (CSV).
-        - Retención proactiva antes de que el cliente se vaya.
-        """
+with col_b:
+    exercise_card(
+        ":material/support_agent:", "Churn Telco",
+        "Abandono de clientes (IBM Telco, 7,043). XGBoost con **SHAP**, EDA y predicción por lotes.",
+        "Abrir Churn Telco", "app_pages/telco_churn.py", "go_telco",
     )
-    if st.button("Abrir Churn Telco", key="go_telco", icon=":material/open_in_new:", type="primary"):
-        st.switch_page("app_pages/telco_churn.py")
-
-with col_ns:
-    st.markdown("## :material/event_busy: Ausentismo Médico")
-    st.markdown(
-        """
-        **Predicción de inasistencias (No-Show)** sobre citas médicas (110,527 registros).
-
-        - Motor: XGBoost balanceado hacia la clase No-Show.
-        - Edad, tiempo de espera, condiciones previas y SMS.
-        - Alertas visuales de riesgo para priorizar recordatorios.
-        """
+with col_c:
+    exercise_card(
+        ":material/event_busy:", "Ausentismo Médico",
+        "Inasistencias a citas (110,527). XGBoost **calibrado** con alertas por bandas de riesgo.",
+        "Abrir Ausentismo Médico", "app_pages/noshow.py", "go_noshow",
     )
-    if st.button("Abrir Ausentismo Médico", key="go_noshow", icon=":material/open_in_new:", type="primary"):
-        st.switch_page("app_pages/noshow.py")
+
+st.markdown("## Regresión y NLP")
+col_d, col_e, col_f = st.columns(3, gap="large")
+with col_d:
+    exercise_card(
+        ":material/storefront:", "Pronóstico de Demanda",
+        "**Regresión**: volumen de ventas por día, producto, precio y promoción. XGBRegressor.",
+        "Abrir Pronóstico de Demanda", "app_pages/demand.py", "go_demand",
+    )
+with col_e:
+    exercise_card(
+        ":material/home_work:", "Valuación Inmobiliaria",
+        "**Regresión**: precio (USD) por superficie, habitaciones, antigüedad y garaje. XGBRegressor.",
+        "Abrir Valuación Inmobiliaria", "app_pages/housing.py", "go_housing",
+    )
+with col_f:
+    exercise_card(
+        ":material/forum:", "Clasificador de Textos (NLP)",
+        "**NLP**: intención de mensajes de chat (Soporte/Ventas/Reclamos/Horarios). TF-IDF + LogReg.",
+        "Abrir Clasificador de Textos", "app_pages/intent.py", "go_intent",
+    )
 
 st.divider()
 
 st.markdown(
     """
-    **Metodología común aplicada en los tres ejercicios:**
+    **Metodología común aplicada en los seis ejercicios:**
 
-    | Fase | Crédito (Scoring) | Telco (Churn) | Médico (No-Show) |
+    | Ejercicio | Tipo | Modelo | Preprocesamiento |
     |---|---|---|---|
-    | Preprocesamiento | OneHot + StandardScaler | OneHot + StandardScaler | StandardScaler |
-    | Partición | 80/20 estratificada | 80/20 estratificada | 80/20 estratificada |
-    | Modelo(s) | LogReg + XGBoost | XGBoost + SHAP | XGBoost balanceado |
-    | Decisión | Umbral "Apetito de Riesgo" | Probabilidad de churn | Bandas de riesgo |
-    | Documentación | Variables, matriz, teoría, estándar | Variables, matriz, teoría, estándar | Variables, matriz, teoría, estándar |
+    | Scoring de Crédito | Clasificación binaria | LogReg + XGBoost | OneHot + StandardScaler |
+    | Churn Telco | Clasificación binaria | XGBoost + SHAP | OneHot + StandardScaler |
+    | Ausentismo Médico | Clasificación binaria | XGBoost calibrado | StandardScaler |
+    | Pronóstico de Demanda | Regresión continua | XGBRegressor | OneHotEncoder |
+    | Valuación Inmobiliaria | Regresión continua | XGBRegressor | StandardScaler |
+    | Clasificador de Textos | NLP multiclase | TF-IDF + LogReg | TfidfVectorizer |
     """
 )
