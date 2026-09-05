@@ -12,6 +12,15 @@ st.markdown(
     """
 )
 
+with st.container(border=True):
+    col_title, col_go = st.columns([5, 1])
+    col_title.markdown("## :material/school: Aprende Machine Learning")
+    col_title.markdown(
+        "Ruta de aprendizaje, glosario con buscador, guía para elegir modelo, **quizzes con corrección en vivo** y FAQ técnico."
+    )
+    if col_go.button("Ir a Aprende ML", key="go_aprende", icon=":material/open_in_new:", type="primary"):
+        st.switch_page("app_pages/aprende.py")
+
 
 def exercise_card(icon: str, title: str, description: str, button_label: str, page: str, key: str) -> None:
     st.markdown(f"## {icon} {title}")

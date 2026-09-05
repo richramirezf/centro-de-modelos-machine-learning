@@ -8,6 +8,12 @@ st.set_page_config(
 )
 
 home = st.Page("app_pages/inicio.py", title="Inicio", icon=":material/home:", default=True)
+aprende = st.Page(
+    "app_pages/aprende.py",
+    title="Aprende ML",
+    icon=":material/school:",
+    url_path="aprende",
+)
 
 credito = st.Page(
     "app_pages/credit_scoring.py",
@@ -49,7 +55,7 @@ intent = st.Page(
 
 pg = st.navigation(
     {
-        "Portal": [home],
+        "Portal": [home, aprende],
         "Clasificación Binaria": [credito, churn, noshow],
         "Regresión & NLP": [demand, housing, intent],
     },
