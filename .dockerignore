@@ -1,0 +1,20 @@
+# Control de versiones / entorno local
+.git
+.gitignore
+.dockerignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Tests (no se necesitan en la imagen)
+tests/
+
+# Secretos: nunca deben hornearse en la imagen
+.streamlit/secrets.toml
+.env

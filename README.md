@@ -220,9 +220,51 @@ Dependencias principales: `streamlit`, `pandas`, `numpy`, `scikit-learn`, `xgboo
 
 ---
 
+## Docker
+
+El portal y la API pueden ejecutarse como contenedores. La imagen parte de `python:3.14-slim`, instala `requirements.txt` e incluye código, modelos, reportes y datasets.
+
+### Construir la imagen
+
+```bash
+docker build -t centro-ml:latest .
+```
+
+### Ejecutar solo el portal
+
+```bash
+docker run -d --name centro-ml-portal -p 8501:8501 centro-ml:latest
+```
+
+Abre http://localhost:8501. El contenedor incluye un `HEALTHCHECK` sobre `/_stcore/health`.
+
+### Portal + API con Docker Compose
+
+```bash
+docker compose up --build -d
+```
+
+- Portal: http://localhost:8501
+- API de crédito: http://localhost:8600/docs
+
+Para el asistente con generación (DeepSeek), exporta la clave antes de levantar:
+
+```bash
+# PowerShell
+$env:DEEPSEEK_API_KEY = "sk-..."; docker compose up --build -d
+# Bash
+DEEPSEEK_API_KEY=sk-... docker compose up --build -d
+```
+
+Detener los contenedores: `docker compose down`.
+
+> Nota: los datasets de `data/` y los modelos de `models/` se copian dentro de la imagen. Si falta algún CSV (p. ej. el de Telco), esa página no podrá calcular su EDA, aunque el resto del portal sigue funcionando.
+
+---
+
 ## Uso
 
-### Ejecutar el portal (3 ejercicios)
+### Ejecutar el portal (6 ejercicios)
 
 ```bash
 python -m streamlit run app.py
