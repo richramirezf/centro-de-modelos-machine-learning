@@ -16,3 +16,7 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Secrets (nunca versionar claves de API)
+.streamlit/secrets.toml
+.env

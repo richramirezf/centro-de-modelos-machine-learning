@@ -163,6 +163,26 @@ centro-de-modelos-machine-learning/
 
 ---
 
+## Asistente RAG (chatbot del portal)
+
+El portal incluye un **asistente flotante** (botón abajo a la derecha → modal de chat) que responde preguntas sobre todo el contenido y **te indica en qué parte del sitio encontrar cada cosa**.
+
+- **Recuperación (RAG):** TF-IDF sobre un corpus generado desde el glosario, conceptos, FAQ, ruta, guía de elección y el resumen de cada ejercicio (`src/assistant_corpus.py`). Sin dependencias pesadas y sin costo.
+- **Generación:** **DeepSeek** (`deepseek-chat`, API compatible con OpenAI) vía `requests` (`src/assistant_rag.py`). El prompt obliga a responder solo con el contexto y a **citar la página y pestaña**.
+- **Sin clave / sin red:** el asistente degrada a **modo solo recuperación**: muestra los fragmentos relevantes y dónde encontrarlos. La app nunca se rompe.
+
+### Configurar la clave
+
+Crea `.streamlit/secrets.toml` (está en `.gitignore`) a partir de `.streamlit/secrets.toml.example`:
+
+```toml
+DEEPSEEK_API_KEY = "sk-tu-clave-aqui"
+```
+
+O define la variable de entorno `DEEPSEEK_API_KEY`. Sin clave, el asistente funciona en modo recuperación.
+
+---
+
 ## Funciones de aprendizaje (portal educativo)
 
 Además de los 6 ejercicios, el portal incluye módulos pensados como **herramienta de aprendizaje**:
