@@ -8,8 +8,7 @@ from src.academy_ui import (
     render_quiz,
     render_route,
 )
-from src.docs import apply_theme
-
+from src.theme import apply_theme
 apply_theme()
 
 st.title("Aprende Machine Learning")

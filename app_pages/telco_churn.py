@@ -1,7 +1,5 @@
-import json
 from pathlib import Path
 
-import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -9,75 +7,25 @@ import plotly.express as px
 import shap
 import streamlit as st
 
-from src.docs import render_confusion_theory, render_standard
+from src.docs import (
+    render_confusion_matrix,
+    render_confusion_theory,
+    render_features_table as render_features_table_shared,
+    render_model_doc,
+    render_standard,
+)
 from src.labs import render_pipeline_overview, render_threshold_lab
+from src.loaders import load_model, load_report
+from src.theme import apply_theme
 from src_telco.data_loader import load_telco_data
 from src_telco.quality import run_quality_pipeline
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODEL_PATH = PROJECT_ROOT / "models" / "churn_model.joblib"
 REPORTS_DIR = PROJECT_ROOT / "reports"
-CONFUSION_PATH = PROJECT_ROOT / "models" / "confusion_report_telco.json"
 
 
-def apply_clean_ui():
-    st.markdown("""
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Plus+Jakarta+Sans:wght@600;700&display=swap');
-
-        html, body, [class*="css"] {
-            font-family: 'Inter', sans-serif;
-        }
-
-        h1, h2, h3 {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            color: #042f2e;
-        }
-
-        .stButton>button {
-            background-color: #0d9488;
-            color: white;
-            border-radius: 8px;
-            border: none;
-            box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06);
-            transition: all 0.2s ease;
-        }
-
-        .stButton>button:hover {
-            background-color: #0f766e;
-            box-shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -2px rgba(0, 0, 0, 0.05);
-            transform: translateY(-1px);
-        }
-
-        div[data-testid="stForm"], div[data-testid="stExpander"] {
-            background-color: #ffffff !important;
-            border-radius: 12px;
-            border: 1px solid #e5e7eb;
-            box-shadow: 0px 1px 3px rgba(0,0,0,0.05);
-        }
-
-        div[data-testid="stForm"] p, div[data-testid="stForm"] label,
-        div[data-testid="stExpander"] p, div[data-testid="stExpander"] label,
-        div[data-testid="stExpander"] li {
-            color: #374151 !important;
-        }
-
-        div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary p, div[data-testid="stExpander"] summary span {
-            color: #042f2e !important;
-            font-weight: 600;
-        }
-
-        div[data-testid="stExpander"] svg {
-            fill: #042f2e !important;
-            color: #042f2e !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-
-@st.cache_resource(show_spinner="Cargando el modelo de churn...")
 def load_churn_model():
-    return joblib.load(MODEL_PATH)
+    return load_model("churn_model.joblib")
 
 
 @st.cache_data(ttl="1h")
@@ -88,12 +36,11 @@ def load_clean_data():
     return df
 
 
-@st.cache_data(ttl="1h")
 def load_confusion_report() -> dict:
-    return json.loads(CONFUSION_PATH.read_text(encoding="utf-8"))
+    return load_report("confusion_report_telco.json")
 
 
-apply_clean_ui()
+apply_theme()
 
 st.title("Predicción de Churn en Telecomunicaciones")
 st.caption("Telco Customer Churn (IBM, 7,043 clientes) — modelo XGBoost con explicabilidad SHAP. Detecta clientes en riesgo de abandono antes de que se vayan.")
@@ -327,61 +274,55 @@ with tab_docs:
         ("PaymentMethod", "Categórica", "Electronic check, Mailed check, Bank transfer (automatic), Credit card (automatic)", "Método de pago"),
         ("MonthlyCharges", "Numérica (decimal)", "~18 – 120 (USD)", "Cargo mensual"),
         ("TotalCharges", "Numérica (decimal)", "Acumulado (USD)", "Cargo total acumulado"),
+        ("Churn (objetivo)", "Binaria", "No (0), Yes (1)", "Abandono del servicio; se codifica 1 = churn para el entrenamiento"),
     ]
-    features_df = pd.DataFrame(telco_features, columns=["Variable", "Tipo", "Valores / Rango", "Descripción"])
-    target_row = pd.DataFrame([("Churn (objetivo)", "Binaria", "No (0), Yes (1)", "Abandono del servicio; se codifica 1 = churn para el entrenamiento")], columns=features_df.columns)
-    st.dataframe(pd.concat([features_df, target_row], ignore_index=True), hide_index=True)
-    st.caption("Preprocesamiento aplicado en el pipeline: StandardScaler sobre las 3 numéricas y OneHotEncoder sobre las 16 categóricas. Se descarta 'customerID' por no tener valor predictivo.")
+    render_features_table_shared(
+        telco_features,
+        "Preprocesamiento aplicado en el pipeline: StandardScaler sobre las 3 numéricas y OneHotEncoder sobre las 16 categóricas. Se descarta 'customerID' por no tener valor predictivo.",
+    )
 
     st.divider()
     st.subheader("Cómo funciona el modelo")
-    st.markdown("### XGBoost con explicabilidad SHAP")
     report = load_confusion_report()
 
-    with st.container(border=True):
-        st.markdown("**¿Qué hace en general?**")
-        st.write(
+    render_model_doc(
+        title="XGBoost con explicabilidad SHAP",
+        general=(
             "Es un ensamble de 200 árboles de decisión entrenados en secuencia: cada árbol nuevo corrige los errores de los anteriores "
             "mediante descenso de gradiente. El modelo aprende qué perfiles de cliente (contrato, antigüedad, cargos, servicios contratados) "
             "se asocian con mayor probabilidad de abandono, y emite una probabilidad continua de churn."
-        )
-        st.markdown("**¿Cómo funciona técnicamente?**")
-        st.write(
+        ),
+        technical=(
             "Pipeline de scikit-learn con dos etapas: (1) preprocesador ColumnTransformer con StandardScaler (numéricas) y "
             "OneHotEncoder (categóricas); (2) XGBClassifier con n_estimators=200, max_depth=5 y learning_rate=0.1. "
             "La probabilidad P(Churn=1 | x) sale de predict_proba. La explicabilidad se obtiene con shap.TreeExplainer "
             "(valores de Shapley): un gráfico waterfall muestra cuánto desplaza cada variable a cada cliente desde la predicción base."
-        )
-        col_a, col_b, col_c, col_d = st.columns(4)
-        col_a.metric("Accuracy (test)", f"{report['test']['accuracy']:.4f}")
-        col_b.metric("ROC-AUC (test)", f"{report['test']['roc_auc']:.4f}")
-        col_c.metric("Precision churn (test)", f"{report['test']['precision_churn']:.4f}")
-        col_d.metric("Recall churn (test)", f"{report['test']['recall_churn']:.4f}")
-        st.markdown("**Casos de uso adicionales**")
-        st.write(
+        ),
+        metrics={
+            "Accuracy (test)": f"{report['test']['accuracy']:.4f}",
+            "ROC-AUC (test)": f"{report['test']['roc_auc']:.4f}",
+            "Precision churn (test)": f"{report['test']['precision_churn']:.4f}",
+            "Recall churn (test)": f"{report['test']['recall_churn']:.4f}",
+        },
+        use_cases=(
             "Programas de retención proactiva (marketing preventivo), segmentación por riesgo de abandono, priorización de campañas, "
             "cálculo de LTV ajustado por riesgo y modelos análogos de churn en banca, seguros o SaaS."
-        )
-        st.markdown("**Consideraciones**")
-        st.write(
+        ),
+        considerations=(
             "Requiere validación cruzada y control de hiperparámetros para evitar sobreajuste (en entrenamiento alcanza ~88% de accuracy vs ~79% en test). "
             "Es menos interpretable de forma nativa: se complementa con SHAP. Con desbalance (27% churn) conviene ajustar scale_pos_weight y priorizar "
             "recall/precision de la clase minoritaria. El umbral de decisión debe fijarse según el costo de retener vs el de perder al cliente."
-        )
+        ),
+    )
 
     st.divider()
     st.subheader("Matriz de confusión — datos de entrenamiento")
-    st.image(str(REPORTS_DIR / "confusion_churn_model.png"), width="stretch", caption="XGBoost Churn — datos de entrenamiento")
-    st.dataframe(
-        pd.DataFrame(
-            report["matrix"],
-            index=["Real: No Churn (0)", "Real: Churn (1)"],
-            columns=["Pred: No Churn (0)", "Pred: Churn (1)"],
-        )
-    )
-    st.write(
-        f"Aciertos: {report['TN'] + report['TP']} de {report['samples']} (accuracy {report['accuracy']:.4f}) · "
-        f"Precision (churn) {report['precision_class_1']:.4f} · Recall (churn) {report['recall_class_1']:.4f}"
+    render_confusion_matrix(
+        report,
+        labels=["No Churn (0)", "Churn (1)"],
+        image_path=REPORTS_DIR / "confusion_churn_model.png",
+        caption="XGBoost Churn — datos de entrenamiento",
+        positive_name="churn",
     )
     st.warning(
         "Conteos sobre el split de entrenamiento (80%). La brecha entre accuracy de entrenamiento (~88%) y de test (~79%) "

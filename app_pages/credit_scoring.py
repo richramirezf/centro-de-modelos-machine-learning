@@ -1,17 +1,22 @@
-import json
 from pathlib import Path
 
-import joblib
 import matplotlib.pyplot as plt
 import pandas as pd
 import shap
 import streamlit as st
 
-from src.docs import render_confusion_theory, render_standard
+from src.docs import (
+    render_confusion_matrix,
+    render_confusion_theory,
+    render_features_table as render_features_table_shared,
+    render_model_doc,
+    render_standard,
+)
 from src.labs import render_pipeline_overview, render_threshold_lab
+from src.loaders import load_model, load_report
+from src.theme import apply_theme
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODELS_DIR = PROJECT_ROOT / "models"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 
 MODEL_LABELS = {
@@ -44,115 +49,13 @@ TEST_METRICS = {
 }
 
 
-def apply_clean_ui() -> None:
-    """Teal (M3) corporate look: white elevated cards, dark-gray/teal text."""
-    st.html(
-        """
-        <style>
-          :root {
-            --teal-900: #004d40;
-            --teal-700: #00796b;
-            --teal-500: #00897b;
-            --teal-100: #b2dfdb;
-            --text-dark: #263238;
-            --text-muted: #546e7a;
-            --surface: #ffffff;
-            --shadow-1: 0 1px 2px rgba(0, 0, 0, .05), 0 1px 3px rgba(0, 0, 0, .10);
-            --shadow-2: 0 2px 4px rgba(0, 0, 0, .08), 0 4px 12px rgba(0, 0, 0, .12);
-          }
-
-          [data-testid="stAppViewContainer"] {
-            background: linear-gradient(180deg, #f0f7f6 0%, #e8f1f0 100%);
-          }
-
-          h1, h2, h3 { color: var(--teal-900) !important; letter-spacing: .2px; }
-
-          [data-testid="stTabs"] button[aria-selected="true"] {
-            color: var(--teal-700);
-            font-weight: 600;
-          }
-
-          [data-testid="stVerticalBlockBorderWrapper"] {
-            background: var(--surface);
-            border: 1px solid rgba(0, 121, 107, .18) !important;
-            border-radius: 16px;
-            box-shadow: var(--shadow-2);
-            padding: .35rem .6rem;
-          }
-
-          [data-testid="stVerticalBlockBorderWrapper"].st-key-engine {
-            border-left: 5px solid var(--teal-500) !important;
-            box-shadow: var(--shadow-1);
-          }
-
-          .st-key-engine [data-testid="stWidgetLabel"] p {
-            color: var(--teal-700);
-            font-size: 1.05rem;
-            font-weight: 600;
-          }
-
-          .result-card {
-            background: var(--surface);
-            border-radius: 16px;
-            box-shadow: var(--shadow-2);
-            padding: 1.5rem 2rem;
-            text-align: center;
-          }
-          .result-card.approved { border-top: 5px solid #1b7f3b; }
-          .result-card.denied   { border-top: 5px solid #c3352b; }
-
-          .verdict {
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: .3px;
-          }
-          .verdict.approved { color: #1b7f3b; }
-          .verdict.denied   { color: #c3352b; }
-
-          .prob-value {
-            font-size: 3.2rem;
-            font-weight: 700;
-            line-height: 1.1;
-            margin: .25rem 0;
-          }
-          .prob-value.approved { color: #1b7f3b; }
-          .prob-value.denied   { color: #c3352b; }
-
-          .prob-label {
-            color: var(--text-muted);
-            font-size: .9rem;
-            letter-spacing: .4px;
-            text-transform: uppercase;
-          }
-
-          .empty-hint { color: var(--text-muted); }
-
-          .st-key-evaluate button[kind="primary"] {
-            background: var(--teal-700);
-            border-radius: 12px;
-            box-shadow: var(--shadow-1);
-            font-weight: 600;
-          }
-          .st-key-evaluate button[kind="primary"]:hover {
-            background: var(--teal-900);
-            box-shadow: var(--shadow-2);
-          }
-        </style>
-        """
-    )
-
-
 @st.cache_resource(show_spinner="Cargando motores predictivos...")
 def load_models() -> dict[str, object]:
-    return {
-        label: joblib.load(MODELS_DIR / filename)
-        for label, filename in MODEL_LABELS.items()
-    }
+    return {label: load_model(filename) for label, filename in MODEL_LABELS.items()}
 
 
-@st.cache_data(ttl="1h")
 def load_confusion_report() -> dict:
-    return json.loads((MODELS_DIR / "confusion_report.json").read_text(encoding="utf-8"))
+    return load_report("confusion_report.json")
 
 
 def render_result(prob: float, threshold_pct: float) -> None:
@@ -174,7 +77,7 @@ def render_result(prob: float, threshold_pct: float) -> None:
 
 
 def render_features_table() -> None:
-    features = [
+    rows = [
         ("Age", "Numérica (entera)", "18 – 100", "Edad del solicitante"),
         ("Sex", "Categórica", "male, female", "Género del solicitante"),
         ("Housing", "Categórica", "own, rent, free", "Régimen de vivienda"),
@@ -183,51 +86,52 @@ def render_features_table() -> None:
         ("Credit amount", "Numérica (entera)", "100 – 100000", "Monto del crédito solicitado"),
         ("Duration", "Numérica (entera)", "1 – 72", "Plazo del crédito en meses"),
         ("Purpose", "Categórica", "car, furniture/equipment, radio/TV, domestic appliances, repairs, education, business, vacation/others", "Finalidad del crédito"),
+        ("Risk (objetivo)", "Binaria", "good (0), bad (1)", "Etiqueta de default; se codifica como 'Risk_num' para el entrenamiento"),
     ]
-    features_df = pd.DataFrame(features, columns=["Variable", "Tipo", "Valores / Rango", "Descripción"])
-    risk_row = pd.DataFrame([("Risk (objetivo)", "Binaria", "good (0), bad (1)", "Etiqueta de default; se codifica como 'Risk_num' para el entrenamiento")], columns=features_df.columns)
-    st.dataframe(pd.concat([features_df, risk_row], ignore_index=True), hide_index=True)
-    st.caption("Preprocesamiento aplicado en el pipeline: OneHotEncoder sobre las categóricas y StandardScaler sobre las numéricas. La columna 'Job' no se utiliza.")
+    render_features_table_shared(
+        rows,
+        "Preprocesamiento aplicado en el pipeline: OneHotEncoder sobre las categóricas y StandardScaler sobre las numéricas. La columna 'Job' no se utiliza.",
+    )
 
 
 def render_model_card(label: str, general: str, technical: str, use_cases: str, considerations: str) -> None:
-    st.markdown(f"### {label}")
-    m1, m2 = TEST_METRICS[label].values()
-
-    with st.container(border=True):
-        st.markdown("**¿Qué hace en general?**")
-        st.write(general)
-        st.markdown("**¿Cómo funciona técnicamente?**")
-        st.write(technical)
-        col_a, col_b, col_c = st.columns(3)
-        col_a.metric("ROC-AUC (test)", f"{m1:.4f}")
-        col_b.metric("Recall clase 1 (test)", f"{m2:.4f}")
-        col_c.metric("Clase de riesgo", "bad (1) = default")
-        st.markdown("**Casos de uso adicionales**")
-        st.write(use_cases)
-        st.markdown("**Consideraciones**")
-        st.write(considerations)
+    roc_auc, recall = TEST_METRICS[label].values()
+    render_model_doc(
+        title=label,
+        general=general,
+        technical=technical,
+        metrics={
+            "ROC-AUC (test)": f"{roc_auc:.4f}",
+            "Recall clase 1 (test)": f"{recall:.4f}",
+            "Clase de riesgo": "bad (1) = default",
+        },
+        use_cases=use_cases,
+        considerations=considerations,
+    )
 
 
 def render_confusion_section() -> None:
     report = load_confusion_report()
     by_model = {m["model_name"]: m for m in report["models"]}
+    labels = ["good (0)", "bad (1)"]
 
     col_lr, col_xgb = st.columns(2)
     with col_lr:
-        lr = by_model["logistic_model"]
-        st.image(str(REPORTS_DIR / "confusion_logistic_model.png"), width="stretch", caption="Regresión Logística — datos de entrenamiento")
-        st.dataframe(
-            pd.DataFrame(lr["matrix"], index=["Real: good (0)", "Real: bad (1)"], columns=["Pred: good (0)", "Pred: bad (1)"])
+        render_confusion_matrix(
+            by_model["logistic_model"],
+            labels=labels,
+            image_path=REPORTS_DIR / "confusion_logistic_model.png",
+            caption="Regresión Logística — datos de entrenamiento",
+            positive_name="bad",
         )
-        st.write(f"Aciertos: {lr['TN'] + lr['TP']} de {lr['samples']} (accuracy {lr['accuracy']:.4f}) · Precision (bad) {lr['precision_class_1']:.4f} · Recall (bad) {lr['recall_class_1']:.4f}")
     with col_xgb:
-        xgb = by_model["xgb_model"]
-        st.image(str(REPORTS_DIR / "confusion_xgb_model.png"), width="stretch", caption="XGBoost — datos de entrenamiento")
-        st.dataframe(
-            pd.DataFrame(xgb["matrix"], index=["Real: good (0)", "Real: bad (1)"], columns=["Pred: good (0)", "Pred: bad (1)"])
+        render_confusion_matrix(
+            by_model["xgb_model"],
+            labels=labels,
+            image_path=REPORTS_DIR / "confusion_xgb_model.png",
+            caption="XGBoost — datos de entrenamiento",
+            positive_name="bad",
         )
-        st.write(f"Aciertos: {xgb['TN'] + xgb['TP']} de {xgb['samples']} (accuracy {xgb['accuracy']:.4f}) · Precision (bad) {xgb['precision_class_1']:.4f} · Recall (bad) {xgb['recall_class_1']:.4f}")
 
     st.warning(
         "Conteos sobre el split de entrenamiento (80%). XGBoost llega a 1.0 en entrenamiento porque los modelos de boosting memorizan datasets pequeños; "
@@ -235,7 +139,7 @@ def render_confusion_section() -> None:
     )
 
 
-apply_clean_ui()
+apply_theme("credit")
 
 st.title("Evaluación de Riesgo Crediticio")
 st.caption("German Credit Dataset — modelo comparativo de scoring. Evalúa solicitudes con umbral dinámico y explora la documentación técnica.")

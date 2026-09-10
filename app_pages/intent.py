@@ -1,17 +1,15 @@
-import json
 from pathlib import Path
 
-import joblib
 import pandas as pd
 import streamlit as st
 from src.academy_ui import render_concept
 
-from src.docs import apply_theme, render_standard
+from src.docs import render_model_doc, render_standard
 from src.labs import render_pipeline_overview
+from src.loaders import load_model, load_report
+from src.theme import apply_theme
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODEL_PATH = PROJECT_ROOT / "models" / "nlp_intent_model.joblib"
-REPORT_PATH = PROJECT_ROOT / "models" / "nlp_intent_report.json"
 
 SAMPLE_MESSAGES = {
     "Horarios": "Hola, a que hora abren manana?",
@@ -28,14 +26,12 @@ INTENT_LABELS = {
 }
 
 
-@st.cache_resource(show_spinner="Cargando modelo de NLP...")
 def load_intent_model():
-    return joblib.load(MODEL_PATH)
+    return load_model("nlp_intent_model.joblib")
 
 
-@st.cache_data(ttl="1h")
 def load_intent_report() -> dict:
-    return json.loads(REPORT_PATH.read_text(encoding="utf-8"))
+    return load_report("nlp_intent_report.json")
 
 
 def render_intent_table() -> None:
@@ -98,32 +94,30 @@ with tab_docs:
     st.subheader("Cómo funciona el modelo")
     report = load_intent_report()
 
-    with st.container(border=True):
-        st.markdown("**¿Qué hace en general?**")
-        st.write(
+    render_model_doc(
+        general=(
             "Clasifica **texto libre** (mensajes de chat, tickets, redes sociales) en una de cuatro intenciones de negocio. "
             "Convierte el texto en números (TF-IDF) y aprende qué palabras distinguen cada intención."
-        )
-        st.markdown("**¿Cómo funciona técnicamente?**")
-        st.write(
+        ),
+        technical=(
             "Pipeline de scikit-learn: TfidfVectorizer (n-gramas 1-2, sublinear_tf) transforma el mensaje en una matriz de pesos "
             "por término, y LogisticRegression multinomial estima P(intención | texto). Se usan predict() para la clase y "
             "predict_proba() para la confianza (probabilidad máxima)."
-        )
-        col_a, col_b = st.columns(2)
-        col_a.metric("Accuracy (test)", f"{report['test']['accuracy']:.4f}")
-        col_b.metric("Muestras de entrenamiento", f"{report['n_samples']}")
-        st.markdown("**Casos de uso adicionales**")
-        st.write(
+        ),
+        metrics={
+            "Accuracy (test)": f"{report['test']['accuracy']:.4f}",
+            "Muestras de entrenamiento": f"{report['n_samples']}",
+        },
+        use_cases=(
             "Chatbots y enrutamiento automático de tickets, priorización de reclamos, análisis de mensajes en redes sociales, "
             "clasificación de correos entrantes y detección de urgencias."
-        )
-        st.markdown("**Consideraciones**")
-        st.write(
+        ),
+        considerations=(
             "Dataset simulado de frases cortas en español; en producción se necesita más variedad, léxico real y gestión de "
             "idiomas/errores ortográficos. La accuracy es muy alta por la separación léxica del corpus simulado; en producción "
             "conviene monitorear la distribución de mensajes y reentrenar ante deriva."
-        )
+        ),
+    )
 
     st.divider()
     st.subheader("Paso a paso recomendado (estándar de industria)")

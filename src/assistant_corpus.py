@@ -1,6 +1,9 @@
 """Corpus del asistente RAG: convierte el contenido educativo y la
 documentación de cada ejercicio en fragmentos con metadatos de ubicación
-(página, pestaña, sección) para poder citar dónde encontrar cada cosa."""
+(página, pestaña, sección) para poder citar dónde encontrar cada cosa.
+
+Los ejercicios se derivan de ``src/manifest.py`` (fuente única de verdad).
+"""
 
 from src.academy_content import (
     CHOOSE_MODEL_INTRO,
@@ -10,62 +13,19 @@ from src.academy_content import (
     GLOSSARY,
     ROUTE,
 )
+from src.manifest import EXERCISES as _MANIFEST_EXERCISES
 
 EXERCISES = [
     {
-        "id": "credito",
-        "title": "Scoring de Crédito",
-        "page": "app_pages/credit_scoring.py",
-        "tabs": ["Evaluación de Riesgo", "Documentación de Modelos", "Laboratorio interactivo"],
-        "model": "Regresión Logística (interpretable) y XGBoost",
-        "metrics": "ROC-AUC 0.7615 (LogReg) y 0.7440 (XGBoost) en test; dataset German Credit (1,000 solicitudes).",
-        "desc": "Estima la probabilidad de default (good/bad) de una solicitud. Incluye umbral dinámico ('Apetito de Riesgo'), API FastAPI en src/api.py y explicabilidad SHAP para XGBoost.",
-    },
-    {
-        "id": "churn",
-        "title": "Churn de Telecomunicaciones",
-        "page": "app_pages/telco_churn.py",
-        "tabs": ["EDA & Calidad", "Predicción Interactiva", "Predicción Masiva (CSV)", "Documentación de Modelos", "Cómo funciona", "Laboratorio"],
-        "model": "XGBoost con explicabilidad SHAP",
-        "metrics": "ROC-AUC 0.8338 y accuracy 0.7942 en test; dataset Telco Customer Churn de IBM (7,043 clientes).",
-        "desc": "Predice el abandono de clientes (Churn). Incluye EDA con Plotly, waterfall SHAP por cliente y predicción masiva subiendo un CSV.",
-    },
-    {
-        "id": "noshow",
-        "title": "Ausentismo Médico (No-Show)",
-        "page": "app_pages/noshow.py",
-        "tabs": ["Predicción de Inasistencia", "Documentación del Ejercicio", "Laboratorio interactivo"],
-        "model": "XGBoost calibrado (CalibratedClassifierCV)",
-        "metrics": "ROC-AUC 0.7227 y recall de No-Show 0.8351 en test; 110,527 citas médicas.",
-        "desc": "Estima la probabilidad de que un paciente no asista a su cita. Trabaja el desbalance de clases, la calibración de probabilidades y alertas por bandas de riesgo.",
-    },
-    {
-        "id": "demanda",
-        "title": "Pronóstico de Demanda",
-        "page": "app_pages/demand.py",
-        "tabs": ["Pronóstico de Demanda", "Documentación del Ejercicio", "Laboratorio (A vs B)"],
-        "model": "XGBRegressor",
-        "metrics": "R² 0.9117, RMSE 5.87 y MAE 4.08 en test; dataset simulado de ventas (20,000 registros).",
-        "desc": "Regresión continua: proyecta el volumen de ventas (unidades) según día de la semana, tipo de producto, precio y promoción activa.",
-    },
-    {
-        "id": "vivienda",
-        "title": "Valuación Inmobiliaria",
-        "page": "app_pages/housing.py",
-        "tabs": ["Valuación de Propiedad", "Documentación del Ejercicio", "Laboratorio (A vs B)"],
-        "model": "XGBRegressor con StandardScaler",
-        "metrics": "R² 0.9011, RMSE ≈ 25,309 USD y MAE ≈ 20,298 USD en test; dataset simulado (15,000 propiedades).",
-        "desc": "Regresión continua: estima el precio de una propiedad (USD) según metros cuadrados, habitaciones, antigüedad y garaje.",
-    },
-    {
-        "id": "intent",
-        "title": "Clasificador de Textos (NLP)",
-        "page": "app_pages/intent.py",
-        "tabs": ["Clasificar Mensaje", "Documentación del Ejercicio", "Laboratorio NLP"],
-        "model": "TF-IDF + Regresión Logística multinomial",
-        "metrics": "Accuracy 1.0000 en test (corpus simulado de 522 mensajes con separación léxica clara).",
-        "desc": "NLP: clasifica mensajes de chat en cuatro intenciones (Soporte_Tecnico, Ventas, Reclamos, Horarios) y muestra la confianza con predict_proba.",
-    },
+        "id": ex["id"],
+        "title": ex["title"],
+        "page": ex["page"],
+        "tabs": ex["tabs"],
+        "model": ex["model"],
+        "metrics": ex["metrics"],
+        "desc": ex["detail"],
+    }
+    for ex in _MANIFEST_EXERCISES
 ]
 
 SITE_INFO = [

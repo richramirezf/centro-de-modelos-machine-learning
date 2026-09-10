@@ -1,0 +1,33 @@
+# Dependencias del Centro de Modelos de Machine Learning.
+# Versiones verificadas en el entorno de desarrollo (Python 3.14).
+
+# Interfaz
+streamlit==1.60.0
+
+# Datos
+pandas==3.0.5
+numpy==2.5.1
+
+# Machine Learning
+scikit-learn==1.9.0
+xgboost==3.4.1
+joblib==1.5.3
+
+# Explicabilidad y visualización
+shap==0.52.0
+matplotlib==3.11.1
+plotly==7.0.0
+
+# Microservicio
+fastapi==0.141.1
+uvicorn==0.51.0
+pydantic==2.13.4
+
+# Asistente RAG (cliente HTTP)
+requests==2.34.2
+
+# Datos externos (no-show)
+kagglehub==1.0.2
+
+# Tests
+pytest==9.1.1

@@ -1,5 +1,10 @@
 import streamlit as st
 
+from src.manifest import EXERCISE_GROUPS, EXERCISES
+from src.theme import apply_theme
+
+apply_theme()
+
 st.title("Centro de Modelos de Machine Learning")
 st.caption("Plataforma unificada con la misma metodología por ejercicio: el caso de negocio, el modelo en acción y su documentación técnica completa.")
 
@@ -22,54 +27,25 @@ with st.container(border=True):
         st.switch_page("app_pages/aprende.py")
 
 
-def exercise_card(icon: str, title: str, description: str, button_label: str, page: str, key: str) -> None:
-    st.markdown(f"## {icon} {title}")
-    st.markdown(description)
-    if st.button(button_label, key=key, icon=":material/open_in_new:", type="primary"):
-        st.switch_page(page)
+def exercise_card(exercise: dict) -> None:
+    st.markdown(f"## {exercise['icon']} {exercise['title']}")
+    st.markdown(exercise["description"])
+    if st.button(
+        f"Abrir {exercise['title']}",
+        key=f"go_{exercise['id']}",
+        icon=":material/open_in_new:",
+        type="primary",
+    ):
+        st.switch_page(exercise["page"])
 
 
-st.markdown("## Clasificación binaria")
-col_a, col_b, col_c = st.columns(3, gap="large")
-with col_a:
-    exercise_card(
-        ":material/credit_score:", "Scoring de Crédito",
-        "Riesgo de **default crediticio** (German Credit, 1,000). LogReg + XGBoost, umbral dinámico y API FastAPI.",
-        "Abrir Scoring de Crédito", "app_pages/credit_scoring.py", "go_credit",
-    )
-with col_b:
-    exercise_card(
-        ":material/support_agent:", "Churn Telco",
-        "Abandono de clientes (IBM Telco, 7,043). XGBoost con **SHAP**, EDA y predicción por lotes.",
-        "Abrir Churn Telco", "app_pages/telco_churn.py", "go_telco",
-    )
-with col_c:
-    exercise_card(
-        ":material/event_busy:", "Ausentismo Médico",
-        "Inasistencias a citas (110,527). XGBoost **calibrado** con alertas por bandas de riesgo.",
-        "Abrir Ausentismo Médico", "app_pages/noshow.py", "go_noshow",
-    )
-
-st.markdown("## Regresión y NLP")
-col_d, col_e, col_f = st.columns(3, gap="large")
-with col_d:
-    exercise_card(
-        ":material/storefront:", "Pronóstico de Demanda",
-        "**Regresión**: volumen de ventas por día, producto, precio y promoción. XGBRegressor.",
-        "Abrir Pronóstico de Demanda", "app_pages/demand.py", "go_demand",
-    )
-with col_e:
-    exercise_card(
-        ":material/home_work:", "Valuación Inmobiliaria",
-        "**Regresión**: precio (USD) por superficie, habitaciones, antigüedad y garaje. XGBRegressor.",
-        "Abrir Valuación Inmobiliaria", "app_pages/housing.py", "go_housing",
-    )
-with col_f:
-    exercise_card(
-        ":material/forum:", "Clasificador de Textos (NLP)",
-        "**NLP**: intención de mensajes de chat (Soporte/Ventas/Reclamos/Horarios). TF-IDF + LogReg.",
-        "Abrir Clasificador de Textos", "app_pages/intent.py", "go_intent",
-    )
+for group in EXERCISE_GROUPS:
+    group_exercises = [ex for ex in EXERCISES if ex["group"] == group]
+    st.markdown(f"## {group}")
+    columns = st.columns(len(group_exercises), gap="large")
+    for column, exercise in zip(columns, group_exercises):
+        with column:
+            exercise_card(exercise)
 
 st.divider()
 

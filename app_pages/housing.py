@@ -1,40 +1,39 @@
-import json
 from pathlib import Path
 
-import joblib
 import pandas as pd
 import streamlit as st
 from src.academy_ui import render_concept
 
-from src.docs import apply_theme, render_standard
-from src.labs import render_pipeline_overview
+from src.docs import render_features_table as render_features_table_shared
+from src.docs import render_model_doc, render_standard
 from src.housing_train import FEATURES
+from src.labs import render_pipeline_overview
+from src.loaders import load_model, load_report
+from src.theme import apply_theme
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODEL_PATH = PROJECT_ROOT / "models" / "housing_model.joblib"
-REPORT_PATH = PROJECT_ROOT / "models" / "housing_report.json"
 
 
-@st.cache_resource(show_spinner="Cargando modelo de valuación...")
 def load_housing_model():
-    return joblib.load(MODEL_PATH)
+    return load_model("housing_model.joblib")
 
 
-@st.cache_data(ttl="1h")
 def load_housing_report() -> dict:
-    return json.loads(REPORT_PATH.read_text(encoding="utf-8"))
+    return load_report("housing_report.json")
 
 
 def render_variables_table() -> None:
-    features = [
+    rows = [
         ("metros_cuadrados", "Numerica (entera)", "40 - 300", "Superficie de la propiedad"),
         ("habitaciones", "Numerica (entera)", "1 - 6", "Numero de habitaciones"),
         ("antiguedad_anios", "Numerica (entera)", "0 - 50", "Antiguedad de la propiedad en anios"),
         ("tiene_garaje", "Binaria (0/1)", "0, 1", "Indica si la propiedad tiene garaje"),
         ("precio_usd (objetivo)", "Continua", "USD", "Precio estimado de la propiedad"),
     ]
-    st.dataframe(pd.DataFrame(features, columns=["Variable", "Tipo", "Valores / Rango", "Descripcion"]), hide_index=True)
-    st.caption("Dataset simulado de propiedades determinista (15000 registros). Preprocesamiento: StandardScaler sobre las numericas.")
+    render_features_table_shared(
+        rows,
+        "Dataset simulado de propiedades determinista (15000 registros). Preprocesamiento: StandardScaler sobre las numericas.",
+    )
 
 
 apply_theme()
@@ -73,32 +72,30 @@ with tab_docs:
     st.subheader("Cómo funciona el modelo")
     report = load_housing_report()
 
-    with st.container(border=True):
-        st.markdown("**¿Qué hace en general?**")
-        st.write(
+    render_model_doc(
+        general=(
             "Modelo de **regresión continua** que estima el valor de mercado de una propiedad en dólares a partir de sus "
             "características físicas. La salida es un precio (número real), no una clase."
-        )
-        st.markdown("**¿Cómo funciona técnicamente?**")
-        st.write(
+        ),
+        technical=(
             "Pipeline de scikit-learn: ColumnTransformer que aplica StandardScaler a metros_cuadrados, habitaciones y "
             "antiguedad_anios (tiene_garaje pasa tal cual) seguido de XGBRegressor (400 árboles, learning_rate=0.05, max_depth=5). "
             "La predicción se ejecuta con predict()."
-        )
-        col_a, col_b, col_c = st.columns(3)
-        col_a.metric("R² (test)", f"{report['test']['r2']:.4f}")
-        col_b.metric("RMSE (test)", f"${report['test']['rmse']:,.0f}")
-        col_c.metric("MAE (test)", f"${report['test']['mae']:,.0f}")
-        st.markdown("**Casos de uso adicionales**")
-        st.write(
+        ),
+        metrics={
+            "R² (test)": f"{report['test']['r2']:.4f}",
+            "RMSE (test)": f"${report['test']['rmse']:,.0f}",
+            "MAE (test)": f"${report['test']['mae']:,.0f}",
+        },
+        use_cases=(
             "Valoración automatizada (AVM) para portales inmobiliarios, soporte a tasaciones, análisis de inversión, "
             "pricing de carteras hipotecarias y detección de propiedades infravaloradas."
-        )
-        st.markdown("**Consideraciones**")
-        st.write(
+        ),
+        considerations=(
             "Dataset simulado: en producción se usan datos reales de transacciones con ubicación y más atributos. "
             "La valuación se evalúa con R²/RMSE/MAE; el error absoluto (~20k USD) debe contrastarse con el rango de precios del mercado."
-        )
+        ),
+    )
 
     st.divider()
     st.subheader("Paso a paso recomendado (estándar de industria)")

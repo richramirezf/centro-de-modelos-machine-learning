@@ -2,14 +2,10 @@ import json
 from pathlib import Path
 
 import joblib
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import pandas as pd
-from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score
 from sklearn.model_selection import train_test_split
 
+from src.confusion_common import confusion_metrics, plot_confusion
 from src.data_loader import load_german_credit_data
 from src.quality import encode_risk, impute_account_missing
 
@@ -29,44 +25,13 @@ def prepare_data() -> pd.DataFrame:
     return encode_risk(df)
 
 
-def build_confusion(model_name: str, X_train: pd.DataFrame, y_train: pd.Series) -> dict:
+def build_confusion(model_name: str, X_train, y_train) -> dict:
     pipeline = joblib.load(MODELS_DIR / f"{model_name}.joblib")
     y_pred = pipeline.predict(X_train)
 
-    tn, fp, fn, tp = confusion_matrix(y_train, y_pred, labels=[0, 1]).ravel()
-
-    return {
-        "model_name": model_name,
-        "matrix": [[int(tn), int(fp)], [int(fn), int(tp)]],
-        "TN": int(tn),
-        "FP": int(fp),
-        "FN": int(fn),
-        "TP": int(tp),
-        "accuracy": float(accuracy_score(y_train, y_pred)),
-        "precision_class_1": float(precision_score(y_train, y_pred)),
-        "recall_class_1": float(recall_score(y_train, y_pred)),
-        "samples": int(len(y_train)),
-    }
-
-
-def plot_confusion(report: dict, output_path: Path) -> None:
-    matrix = report["matrix"]
-    fig, ax = plt.subplots(figsize=(4.6, 4))
-    im = ax.imshow(matrix, cmap="Blues")
-    ax.set_xticks([0, 1], CLASS_LABELS)
-    ax.set_yticks([0, 1], CLASS_LABELS)
-    ax.set_xlabel("Predicción")
-    ax.set_ylabel("Real")
-    ax.set_title(f"Matriz de confusión (entrenamiento)\n{report['model_name']} — {report['samples']} muestras")
-
-    for i in range(2):
-        for j in range(2):
-            ax.text(j, i, matrix[i][j], ha="center", va="center", color="white" if matrix[i][j] > 40 else "#0b3d2e", fontsize=14)
-
-    fig.colorbar(im, ax=ax, fraction=0.046)
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=150)
-    plt.close(fig)
+    report = confusion_metrics(y_train, y_pred, labels=[0, 1])
+    report["model_name"] = model_name
+    return report
 
 
 def main() -> None:
@@ -83,7 +48,12 @@ def main() -> None:
     for model_name in ["logistic_model", "xgb_model"]:
         report = build_confusion(model_name, X_train, y_train)
         records.append(report)
-        plot_confusion(report, REPORTS_DIR / f"confusion_{model_name}.png")
+        plot_confusion(
+            report,
+            REPORTS_DIR / f"confusion_{model_name}.png",
+            labels=CLASS_LABELS,
+            title=model_name,
+        )
 
     (MODELS_DIR / "confusion_report.json").write_text(
         json.dumps({"target": "Risk_num (1 = bad / default)", "classes": CLASS_LABELS, "models": records}, indent=2),

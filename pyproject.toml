@@ -1,0 +1,30 @@
+[project]
+name = "centro-de-modelos-machine-learning"
+version = "0.1.0"
+description = "Portal educativo de machine learning con seis ejercicios y asistente RAG (Streamlit)."
+requires-python = ">=3.11"
+readme = "README.md"
+
+dependencies = [
+    "streamlit>=1.60",
+    "pandas>=2.0",
+    "numpy>=1.26",
+    "scikit-learn>=1.5",
+    "xgboost>=2.0",
+    "joblib>=1.3",
+    "shap>=0.45",
+    "matplotlib>=3.8",
+    "plotly>=5.20",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "pydantic>=2.6",
+    "requests>=2.31",
+    "kagglehub>=0.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

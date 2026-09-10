@@ -1,53 +1,79 @@
-"""Shared documentation renderers used by every ML exercise page."""
+"""Renderizadores de documentación compartidos por las páginas de ejercicios."""
 
+from pathlib import Path
+
+import pandas as pd
 import streamlit as st
 
 
-def apply_theme() -> None:
-    """Generic teal/M3 page theme shared by the exercise pages."""
-    st.html(
-        """
-        <style>
-          :root {
-            --teal-900: #004d40;
-            --teal-700: #00796b;
-            --text-muted: #546e7a;
-            --surface: #ffffff;
-            --shadow-2: 0 2px 4px rgba(0, 0, 0, .08), 0 4px 12px rgba(0, 0, 0, .12);
-          }
+def render_features_table(rows: list[tuple], note: str | None = None) -> None:
+    """Tabla de variables predictoras con columnas estándar.
 
-          [data-testid="stAppViewContainer"] {
-            background: linear-gradient(180deg, #f0f7f6 0%, #e8f1f0 100%);
-          }
+    ``rows`` es una lista de tuplas ``(Variable, Tipo, Valores/Rango, Descripción)``.
+    """
+    df = pd.DataFrame(rows, columns=["Variable", "Tipo", "Valores / Rango", "Descripción"])
+    st.dataframe(df, hide_index=True)
+    if note:
+        st.caption(note)
 
-          h1, h2, h3 { color: var(--teal-900) !important; letter-spacing: .2px; }
 
-          [data-testid="stTabs"] button[aria-selected="true"] {
-            color: var(--teal-700);
-            font-weight: 600;
-          }
+def render_model_doc(
+    *,
+    general: str,
+    technical: str,
+    metrics: dict[str, str],
+    use_cases: str,
+    considerations: str,
+    title: str | None = None,
+) -> None:
+    """Tarjeta estándar de documentación de un modelo.
 
-          [data-testid="stVerticalBlockBorderWrapper"] {
-            background: var(--surface);
-            border: 1px solid rgba(0, 121, 107, .18) !important;
-            border-radius: 16px;
-            box-shadow: var(--shadow-2);
-            padding: .35rem .6rem;
-          }
+    ``metrics`` es un diccionario ``{etiqueta: valor}`` que se muestra como
+    columnas de ``st.metric``.
+    """
+    if title:
+        st.markdown(f"### {title}")
+    with st.container(border=True):
+        st.markdown("**¿Qué hace en general?**")
+        st.write(general)
+        st.markdown("**¿Cómo funciona técnicamente?**")
+        st.write(technical)
+        columns = st.columns(len(metrics))
+        for column, (label, value) in zip(columns, metrics.items()):
+            column.metric(label, value)
+        st.markdown("**Casos de uso adicionales**")
+        st.write(use_cases)
+        st.markdown("**Consideraciones**")
+        st.write(considerations)
 
-          .st-key-evaluate button[kind="primary"] {
-            background: var(--teal-700);
-            border-radius: 12px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 1px 3px rgba(0, 0, 0, .10);
-            font-weight: 600;
-          }
-          .st-key-evaluate button[kind="primary"]:hover {
-            background: var(--teal-900);
-          }
 
-          .empty-hint { color: var(--text-muted); }
-        </style>
-        """
+def render_confusion_matrix(
+    report: dict,
+    *,
+    labels: list[str],
+    image_path: str | Path | None = None,
+    caption: str | None = None,
+    positive_name: str = "clase 1",
+) -> None:
+    """Matriz de confusión (imagen opcional + tabla + métricas resumidas).
+
+    ``report`` debe incluir ``matrix``, ``TN/FP/FN/TP``, ``accuracy``,
+    ``precision_class_1``, ``recall_class_1`` y ``samples``.
+    """
+    if image_path is not None:
+        st.image(str(image_path), width="stretch", caption=caption)
+    st.dataframe(
+        pd.DataFrame(
+            report["matrix"],
+            index=[f"Real: {labels[0]}", f"Real: {labels[1]}"],
+            columns=[f"Pred: {labels[0]}", f"Pred: {labels[1]}"],
+        )
+    )
+    st.write(
+        f"Aciertos: {report['TN'] + report['TP']} de {report['samples']} "
+        f"(accuracy {report['accuracy']:.4f}) · "
+        f"Precision ({positive_name}) {report['precision_class_1']:.4f} · "
+        f"Recall ({positive_name}) {report['recall_class_1']:.4f}"
     )
 
 
